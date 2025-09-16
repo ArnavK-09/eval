@@ -26,8 +26,8 @@ jobs:
     needs: debug
     if: >
       github.event.pull_request &&
-      (github.event.pull_request.user.login == 'tscircuitbot' || 
-       github.actor == 'tscircuitbot') &&
+      (github.event.pull_request.user.login == 'ArnavK-09' || 
+       github.actor == 'ArnavK-09') &&
       contains(github.event.pull_request.title, 'chore: update @tscircuit/core')
     
     steps:

@@ -1,10 +1,15 @@
 import type { AnyCircuitElement } from "circuit-json"
-import type { RootCircuitEventName } from "@tscircuit/core"
+import type { RootCircuitEventName as CoreRootCircuitEventName } from "@tscircuit/core"
+import type { PlatformConfig } from "@tscircuit/props"
+
+export type RootCircuitEventName = CoreRootCircuitEventName | "debug:logOutput"
 
 export interface CircuitRunnerConfiguration {
   snippetsApiBaseUrl: string
   cjsRegistryUrl: string
   verbose?: boolean
+  platform?: PlatformConfig
+  projectConfig?: Partial<PlatformConfig>
 }
 
 export interface WebWorkerConfiguration extends CircuitRunnerConfiguration {
@@ -14,18 +19,27 @@ export interface WebWorkerConfiguration extends CircuitRunnerConfiguration {
    */
   webWorkerUrl?: URL | string
   webWorkerBlobUrl?: URL | string
+  /**
+   * Enable fetch proxy to route worker fetch requests through parent thread.
+   * Useful when running in restricted environments (like ChatGPT) where
+   * worker fetch requests are blocked.
+   * Default: false
+   */
+  enableFetchProxy?: boolean
 }
 
 /**
  * API for the CircuitRunner class, used for eval'ing circuits
  */
 export interface CircuitRunnerApi {
+  version: () => Promise<string>
   execute: (
     code: string,
     opts?: {
       name?: string
     },
   ) => Promise<void>
+  executeComponent: (component: any) => Promise<void>
   executeWithFsMap(opts: {
     entrypoint?: string
     fsMap: Record<string, string>
@@ -34,6 +48,9 @@ export interface CircuitRunnerApi {
   renderUntilSettled: () => Promise<void>
   getCircuitJson: () => Promise<AnyCircuitElement[]>
   setSnippetsApiBaseUrl: (baseUrl: string) => Promise<void>
+  setPlatformConfig: (platform: PlatformConfig) => Promise<void>
+  setProjectConfig: (project: Partial<PlatformConfig>) => Promise<void>
+  enableDebug: (namespace: string) => Promise<void>
   on: (event: RootCircuitEventName, callback: (...args: any[]) => void) => void
   clearEventListeners: () => void
   kill: () => Promise<void>
@@ -46,6 +63,7 @@ export type InternalWebWorkerApi = CircuitRunnerApi
 
 export type CircuitWebWorker = {
   execute: (code: string) => Promise<void>
+  executeComponent: (component: any) => Promise<void>
   executeWithFsMap: (opts: {
     entrypoint?: string
     mainComponentPath?: string
@@ -55,5 +73,7 @@ export type CircuitWebWorker = {
   getCircuitJson: () => Promise<AnyCircuitElement[]>
   on: (event: RootCircuitEventName, callback: (...args: any[]) => void) => void
   clearEventListeners: () => void
+  enableDebug: (namespace: string) => Promise<void>
+  version: () => Promise<string>
   kill: () => Promise<void>
 }

@@ -1,4 +1,7 @@
-import { resolveFilePath, resolveFilePathOrThrow } from "./resolveFilePath"
+import { resolveFilePathOrThrow } from "./resolveFilePath"
+import Debug from "debug"
+
+const debug = Debug("tsci:eval:setupDefaultEntrypointIfNeeded")
 
 export const setupDefaultEntrypointIfNeeded = (opts: {
   entrypoint?: string
@@ -17,6 +20,16 @@ export const setupDefaultEntrypointIfNeeded = (opts: {
       Object.keys(opts.fsMap).filter((k) => k.endsWith(".tsx")).length === 1
     ) {
       opts.mainComponentPath = Object.keys(opts.fsMap)[0]
+    } else if ("tscircuit.config.json" in opts.fsMap) {
+      const configContent = opts.fsMap["tscircuit.config.json"]
+      try {
+        const config = JSON.parse(configContent)
+        if (config.mainEntrypoint) {
+          opts.entrypoint = config.mainEntrypoint
+        }
+      } catch (e) {
+        console.warn("Failed to parse tscircuit.config.json:", e)
+      }
     } else {
       throw new Error(
         "Either entrypoint or mainComponentPath must be provided (no index file, could not infer entrypoint)",
@@ -36,25 +49,28 @@ export const setupDefaultEntrypointIfNeeded = (opts: {
     opts.fsMap[opts.entrypoint] = `
      import * as UserComponents from "./${opts.mainComponentPath}";
           
-      const hasBoard = ${mainComponentCode.includes("<board").toString()};
       ${
         opts.mainComponentName
           ? `
         const ComponentToRender = UserComponents["${opts.mainComponentName}"]
         `
-          : `const ComponentToRender = Object.entries(UserComponents)
-        .filter(([name]) => !name.startsWith("use"))
-        .map(([_, component]) => component)[0] || (() => null);`
+          : `const ComponentToRender = UserComponents.default || 
+          Object.entries(UserComponents)
+          .filter(([name]) => !name.startsWith("use"))
+          .map(([_, component]) => component)[0] || (() => null);`
       }
 
-      circuit.add(
-        hasBoard ? (
-          <ComponentToRender ${opts.mainComponentProps ? `{...${JSON.stringify(opts.mainComponentProps, null, 2)}}` : ""} />
-        ) : (
-          <board>
-            <ComponentToRender name="U1" ${opts.mainComponentProps ? `{...${JSON.stringify(opts.mainComponentProps, null, 2)}}` : ""} />
-          </board>
-        )
+           ${
+             debug.enabled
+               ? `
+     console.log({ UserComponents })
+     console.log("ComponentToRender " + ComponentToRender.toString(),  { ComponentToRender })
+     `
+               : ""
+           }
+
+      circuit.add(       
+          <ComponentToRender ${opts.mainComponentProps ? `{...${JSON.stringify(opts.mainComponentProps, null, 2)}}` : ""} /> 
       );
 `
   }

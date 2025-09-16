@@ -2,10 +2,12 @@ import { RootCircuit } from "@tscircuit/core"
 import type { WebWorkerConfiguration } from "lib/shared/types"
 import * as tscircuitCore from "@tscircuit/core"
 import * as React from "react"
-import * as jscadFiber from "jscad-fiber"
 import * as tscircuitMathUtils from "@tscircuit/math-utils"
 import type { PlatformConfig } from "@tscircuit/props"
 import { getPlatformConfig } from "lib/getPlatformConfig"
+import Debug from "debug"
+
+const debug = Debug("tsci:eval:execution-context")
 
 export interface ExecutionContext extends WebWorkerConfiguration {
   fsMap: Record<string, string>
@@ -19,16 +21,27 @@ export function createExecutionContext(
   opts: {
     name?: string
     platform?: PlatformConfig
+    projectConfig?: Partial<PlatformConfig>
+    debugNamespace?: string
   } = {},
 ): ExecutionContext {
   globalThis.React = React
 
+  const basePlatform = opts.platform || getPlatformConfig()
+  const platform = opts.projectConfig
+    ? { ...basePlatform, ...opts.projectConfig }
+    : basePlatform
+
   const circuit = new RootCircuit({
-    platform: opts.platform || getPlatformConfig(),
+    platform,
   })
 
   if (opts.name) {
     circuit.name = opts.name
+  }
+
+  if (opts.debugNamespace) {
+    circuit.enableDebug(opts.debugNamespace)
   }
 
   return {
@@ -39,7 +52,7 @@ export function createExecutionContext(
       tscircuit: tscircuitCore,
       "@tscircuit/math-utils": tscircuitMathUtils,
       react: React,
-      "jscad-fiber": jscadFiber,
+      debug: Debug,
 
       // This is usually used as a type import, we can remove the shim when we
       // ignore type imports in getImportsFromCode

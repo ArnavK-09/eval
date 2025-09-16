@@ -3,12 +3,16 @@ import type {
   CircuitRunnerApi,
   CircuitRunnerConfiguration,
 } from "lib/shared/types"
+import type { PlatformConfig } from "@tscircuit/props"
 import { createExecutionContext } from "../../webworker/execution-context"
 import { normalizeFsMap } from "./normalizeFsMap"
 import type { RootCircuit } from "@tscircuit/core"
 import * as React from "react"
 import { importEvalPath } from "webworker/import-eval-path"
 import { setupDefaultEntrypointIfNeeded } from "./setupDefaultEntrypointIfNeeded"
+import Debug from "debug"
+
+const debug = Debug("tsci:eval:CircuitRunner")
 
 export class CircuitRunner implements CircuitRunnerApi {
   _executionContext: ReturnType<typeof createExecutionContext> | null = null
@@ -18,6 +22,15 @@ export class CircuitRunner implements CircuitRunnerApi {
     verbose: false,
   }
   _eventListeners: Record<string, ((...args: any[]) => void)[]> = {}
+  _debugNamespace: string | undefined
+
+  constructor(configuration: Partial<CircuitRunnerConfiguration> = {}) {
+    Object.assign(this._circuitRunnerConfiguration, configuration)
+  }
+
+  async version(): Promise<string> {
+    return "0.0.0"
+  }
 
   async executeWithFsMap(ogOpts: {
     entrypoint?: string
@@ -28,20 +41,30 @@ export class CircuitRunner implements CircuitRunnerApi {
     mainComponentProps?: Record<string, any>
   }): Promise<void> {
     const opts = { ...ogOpts }
+
     if (this._circuitRunnerConfiguration.verbose) {
-      console.log("[CircuitRunner] executeWithFsMap called with:", {
-        entrypoint: opts.entrypoint,
-        fsMapKeys: Object.keys(opts.fsMap),
-        name: opts.name,
-      })
+      Debug.enable("tsci:eval:*")
     }
 
+    debug("executeWithFsMap called with:", {
+      entrypoint: opts.entrypoint,
+      fsMapKeys: Object.keys(opts.fsMap),
+      name: opts.name,
+    })
+
     setupDefaultEntrypointIfNeeded(opts)
+
+    debug("entrypoint after setupDefaultEntrypointIfNeeded:", {
+      entrypoint: opts.entrypoint,
+    })
 
     this._executionContext = createExecutionContext(
       this._circuitRunnerConfiguration,
       {
         name: opts.name,
+        platform: this._circuitRunnerConfiguration.platform,
+        projectConfig: this._circuitRunnerConfiguration.projectConfig,
+        debugNamespace: this._debugNamespace,
       },
     )
     this._bindEventListeners(this._executionContext.circuit)
@@ -56,6 +79,7 @@ export class CircuitRunner implements CircuitRunnerApi {
       ? opts.entrypoint
       : `./${opts.entrypoint}`
 
+    debug("final entrypoint:", entrypoint)
     await importEvalPath(entrypoint!, this._executionContext)
   }
 
@@ -69,13 +93,39 @@ export class CircuitRunner implements CircuitRunnerApi {
 
     this._executionContext = createExecutionContext(
       this._circuitRunnerConfiguration,
-      opts,
+      {
+        ...opts,
+        platform: this._circuitRunnerConfiguration.platform,
+        projectConfig: this._circuitRunnerConfiguration.projectConfig,
+        debugNamespace: this._debugNamespace,
+      },
     )
     this._bindEventListeners(this._executionContext.circuit)
     this._executionContext.fsMap["entrypoint.tsx"] = code
     ;(globalThis as any).__tscircuit_circuit = this._executionContext.circuit
 
     await importEvalPath("./entrypoint.tsx", this._executionContext)
+  }
+
+  async executeComponent(component: any, opts: { name?: string } = {}) {
+    if (this._circuitRunnerConfiguration.verbose) {
+      console.log("[CircuitRunner] executeComponent called")
+    }
+
+    this._executionContext = createExecutionContext(
+      this._circuitRunnerConfiguration,
+      {
+        ...opts,
+        platform: this._circuitRunnerConfiguration.platform,
+        projectConfig: this._circuitRunnerConfiguration.projectConfig,
+        debugNamespace: this._debugNamespace,
+      },
+    )
+    this._bindEventListeners(this._executionContext.circuit)
+    ;(globalThis as any).__tscircuit_circuit = this._executionContext.circuit
+
+    const element = typeof component === "function" ? component() : component
+    this._executionContext.circuit.add(element as any)
   }
 
   on(event: string, callback: (...args: any[]) => void) {
@@ -123,6 +173,22 @@ export class CircuitRunner implements CircuitRunnerApi {
 
   async setSnippetsApiBaseUrl(baseUrl: string) {
     this._circuitRunnerConfiguration.snippetsApiBaseUrl = baseUrl
+  }
+
+  async setPlatformConfig(platform: PlatformConfig) {
+    this._circuitRunnerConfiguration.platform = platform
+  }
+
+  async setProjectConfig(project: Partial<PlatformConfig>) {
+    this._circuitRunnerConfiguration.projectConfig = project
+  }
+
+  async enableDebug(namespace: string) {
+    this._debugNamespace = namespace
+    if (this._executionContext) {
+      const circuit = this._executionContext.circuit as any
+      circuit.enableDebug?.(namespace)
+    }
   }
 
   private _bindEventListeners(circuit: RootCircuit) {

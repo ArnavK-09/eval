@@ -6,7 +6,7 @@ test("circuit-web-worker-events", async () => {
   const capturedEvents: string[] = []
 
   const circuitWebWorker = await createCircuitWebWorker({
-    webWorkerUrl: new URL("../webworker/entrypoint.ts", import.meta.url),
+    webWorkerUrl: new URL("../../webworker/entrypoint.ts", import.meta.url),
   })
 
   await circuitWebWorker.execute(`
@@ -40,4 +40,6 @@ test("circuit-web-worker-events", async () => {
   expect(capturedEvents.length).toBeGreaterThan(0)
   expect(capturedEvents).toContain("pcbComponentRenderStart")
   expect(capturedEvents).toContain("pcbComponentRenderEnd")
+
+  await circuitWebWorker.kill()
 })

@@ -59,7 +59,7 @@ const example2 = {
 
 test("example1: Manual edits in entrypoint.tsx file", async () => {
   const circuitWebWorker = await createCircuitWebWorker({
-    webWorkerUrl: new URL("../webworker/index.ts", import.meta.url),
+    webWorkerUrl: new URL("../../webworker/index.ts", import.meta.url),
   })
 
   await circuitWebWorker.executeWithFsMap({
@@ -83,11 +83,13 @@ test("example1: Manual edits in entrypoint.tsx file", async () => {
 
   expect(pcb_component.center.x).toBe(5)
   expect(pcb_component.center.y).toBe(5)
+
+  await circuitWebWorker.kill()
 })
 
 test("example2: Manual edits in manual-edits.json file", async () => {
   const circuitWebWorker = await createCircuitWebWorker({
-    webWorkerUrl: new URL("../webworker/index.ts", import.meta.url),
+    webWorkerUrl: new URL("../../webworker/index.ts", import.meta.url),
   })
 
   await circuitWebWorker.executeWithFsMap({
@@ -111,4 +113,6 @@ test("example2: Manual edits in manual-edits.json file", async () => {
 
   expect(pcb_component.center.x).toBe(5)
   expect(pcb_component.center.y).toBe(5)
+
+  await circuitWebWorker.kill()
 })

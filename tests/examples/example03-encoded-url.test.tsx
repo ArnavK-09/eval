@@ -1,7 +1,7 @@
 import { createCircuitWebWorker } from "lib"
 import { expect, test } from "bun:test"
 // @ts-ignore
-import blobUrl from "dist/blob-url"
+import blobUrl from "../../dist/blob-url"
 
 test("example3-encoded-worker-url", async () => {
   const circuitWebWorker = await createCircuitWebWorker({
@@ -9,11 +9,9 @@ test("example3-encoded-worker-url", async () => {
   })
 
   await circuitWebWorker.execute(`
-  import { RedLed } from "@tsci/seveibar.red-led"
-
   circuit.add(
     <board width="10mm" height="10mm">
-      <RedLed name="LED1" />
+      <resistor resistance="1k" footprint="0402" name="R1" />
     </board>
   )
   `)
@@ -22,7 +20,9 @@ test("example3-encoded-worker-url", async () => {
 
   const circuitJson = await circuitWebWorker.getCircuitJson()
 
-  const led = circuitJson.find((el: any) => el.name === "LED1")
-  expect(led).toBeDefined()
-  expect(led?.type).toBe("source_component")
+  const resistor = circuitJson.find((el: any) => el.name === "R1")
+  expect(resistor).toBeDefined()
+  expect(resistor?.type).toBe("source_component")
+
+  await circuitWebWorker.kill()
 })

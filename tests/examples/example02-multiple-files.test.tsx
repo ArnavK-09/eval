@@ -3,7 +3,7 @@ import { expect, test } from "bun:test"
 
 test("virtual filesystem with components", async () => {
   const circuitWebWorker = await createCircuitWebWorker({
-    webWorkerUrl: new URL("../webworker/entrypoint.ts", import.meta.url),
+    webWorkerUrl: new URL("../../webworker/entrypoint.ts", import.meta.url),
   })
 
   await circuitWebWorker.executeWithFsMap({
@@ -40,4 +40,6 @@ test("virtual filesystem with components", async () => {
 
   const led = circuitJson.find((el: any) => el.name === "LED1")
   expect(led?.type).toBe("source_component")
+
+  await circuitWebWorker.kill()
 })

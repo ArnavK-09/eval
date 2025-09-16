@@ -1,10 +1,9 @@
-import { createCircuitWebWorker } from "lib/worker"
+import { createCircuitWebWorker } from "lib"
 import { expect, test } from "bun:test"
 
-test("example1-readme-example", async () => {
-  const circuitWebWorker = await createCircuitWebWorker({
-    webWorkerUrl: new URL("../webworker/entrypoint.ts", import.meta.url),
-  })
+// TODO should skip b/c uses network
+test.skip("example6-dynamic-load-blob-url", async () => {
+  const circuitWebWorker = await createCircuitWebWorker({})
 
   await circuitWebWorker.execute(`
   import { RedLed } from "@tsci/seveibar.red-led"
@@ -25,4 +24,6 @@ test("example1-readme-example", async () => {
   const led = circuitJson.find((el: any) => el.name === "LED1")
   expect(led).toBeDefined()
   expect(led?.type).toBe("source_component")
+
+  await circuitWebWorker.kill()
 })

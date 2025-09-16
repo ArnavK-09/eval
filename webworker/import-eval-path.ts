@@ -6,6 +6,10 @@ import { importSnippet } from "./import-snippet"
 import { resolveFilePath } from "lib/runner/resolveFilePath"
 import { resolveNodeModule } from "lib/utils/resolve-node-module"
 import { importNodeModule } from "./import-node-module"
+import { importNpmPackage } from "./import-npm-package"
+import Debug from "debug"
+
+const debug = Debug("tsci:eval:import-eval-path")
 
 export async function importEvalPath(
   importName: string,
@@ -15,9 +19,13 @@ export async function importEvalPath(
     cwd?: string
   } = {},
 ) {
-  if (ctx.verbose) {
-    console.log(`[Worker] ${"  ".repeat(depth)}➡️`, importName)
-  }
+  debug("importEvalPath called with:", {
+    importName,
+    depth,
+    opts,
+  })
+
+  debug(`${"  ".repeat(depth)}➡️`, importName)
   const { preSuppliedImports } = ctx
 
   if (preSuppliedImports[importName]) return
@@ -26,6 +34,16 @@ export async function importEvalPath(
 
   if (depth > 5) {
     console.log("Max depth for imports reached")
+    return
+  }
+
+  if (importName.startsWith("/npm/")) {
+    const pkgName = importName.replace(/^\/npm\//, "").replace(/\/\+esm$/, "")
+    await importNpmPackage(pkgName, ctx, depth)
+    const pkg = preSuppliedImports[pkgName]
+    if (pkg) {
+      preSuppliedImports[importName] = pkg
+    }
     return
   }
 
@@ -50,6 +68,10 @@ export async function importEvalPath(
 
   if (importName.startsWith("@tsci/")) {
     return importSnippet(importName, ctx, depth)
+  }
+
+  if (!importName.startsWith(".") && !importName.startsWith("/")) {
+    return importNpmPackage(importName, ctx, depth)
   }
 
   throw new Error(

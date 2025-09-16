@@ -3,7 +3,7 @@ import { expect, test } from "bun:test"
 
 test("namespace import syntax", async () => {
   const circuitWebWorker = await createCircuitWebWorker({
-    webWorkerUrl: new URL("../webworker/entrypoint.ts", import.meta.url),
+    webWorkerUrl: new URL("../../webworker/entrypoint.ts", import.meta.url),
   })
 
   await circuitWebWorker.executeWithFsMap({
@@ -33,11 +33,13 @@ test("namespace import syntax", async () => {
   const component = circuitJson.find((el: any) => el.name === "COMP1")
   expect(component).toBeDefined()
   expect(component?.type).toBe("source_component")
+
+  await circuitWebWorker.kill()
 })
 
 test("combined default and namespace import with fallback", async () => {
   const circuitWebWorker = await createCircuitWebWorker({
-    webWorkerUrl: new URL("../webworker/entrypoint.ts", import.meta.url),
+    webWorkerUrl: new URL("../../webworker/entrypoint.ts", import.meta.url),
   })
 
   await circuitWebWorker.executeWithFsMap({
@@ -67,4 +69,6 @@ test("combined default and namespace import with fallback", async () => {
   const board = circuitJson.find((el: any) => el.name === "BOARD1")
   expect(board).toBeDefined()
   expect(board?.type).toBe("source_component")
+
+  await circuitWebWorker.kill()
 })

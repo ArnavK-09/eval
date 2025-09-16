@@ -43,7 +43,7 @@ jobs:
       - name: Run tests for ${{ matrix.test-dir }}
         run: |
           set +e
-          for i in 1 2 3; do
+          for i in 1 2 3 4; do
             bun test tests/${{ matrix.test-dir }} --timeout 30000 -t "a"
             code=$?
             if [ $code -eq 0 ]; then
